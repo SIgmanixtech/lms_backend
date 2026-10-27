@@ -1,3 +1,4 @@
+import { logged } from "@backend/lib/http/endpoint";
 import { bootstrapAdminSchema, zodDetails } from "@/features/auth/schemas/auth.schemas";
 import { AppError, toAppError } from "@/lib/errors";
 import { readJson } from "@backend/lib/http/body";
@@ -12,7 +13,7 @@ import { bootstrapFirstAdmin, verifyBootstrapToken } from "@backend/server/auth/
  * - rate limited per IP; never returns or logs the password
  * Server-to-server only: no CORS headers, so browsers on other sites can't read the response.
  */
-export async function POST(request: Request): Promise<Response> {
+async function bootstrap(request: Request): Promise<Response> {
   const correlationId = crypto.randomUUID();
   try {
     enforce(`bootstrap:${clientIp(request)}`, PUBLIC_SECRET);
@@ -27,3 +28,5 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: false, error: { ...appError.toPayload(), correlationId } }, { status: appError.status, headers: { "Cache-Control": "no-store" } });
   }
 }
+
+export const POST = logged(bootstrap);

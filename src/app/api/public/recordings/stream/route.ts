@@ -1,3 +1,4 @@
+import { logged } from "@backend/lib/http/endpoint";
 import { planRange, playerPage, totalFromContentRange, wantsPlayerPage } from "@/features/meetings/services/recording-range";
 import { ZohoError } from "@/features/meetings/services/zoho-policy";
 import { corsHeaders, preflight } from "@backend/lib/http/cors";
@@ -91,6 +92,6 @@ async function handle(request: Request): Promise<Response> {
   }
 }
 
-export const GET = handle;
-export const HEAD = handle;
+export const GET = logged(handle);
+export const HEAD = logged(handle);
 export const OPTIONS = (request: Request) => preflight(request, METHODS);

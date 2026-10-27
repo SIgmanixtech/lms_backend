@@ -88,3 +88,21 @@ describe("POST /api/auth/login", () => {
     expect(signInWithPassword).not.toHaveBeenCalled();
   });
 });
+
+describe("access log", () => {
+  it("writes one line per request with status and user, never the password or email", async () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      ok("user-123"); profile({ id: "user-123" });
+      await call({ email: "logme@example.in", password: "Sup3r-Secret!" });
+      signInWithPassword.mockResolvedValue({ data: { session: null, user: null }, error: { code: "invalid_credentials", status: 400 } });
+      await call({ email: "logme@example.in", password: "wrong" });
+      const lines = spy.mock.calls.map((c) => String(c[0])).filter((l) => l.includes('"type":"access"'));
+      expect(lines).toHaveLength(2);
+      const [okLine, failLine] = lines.map((l) => JSON.parse(l));
+      expect(okLine).toMatchObject({ method: "POST", path: "/api/auth/login", status: 200, user: "user-123", level: "info" });
+      expect(failLine).toMatchObject({ status: 401, code: "AUTHENTICATION_ERROR", user: null, level: "warn" });
+      expect(lines.join("\n")).not.toMatch(/Sup3r-Secret|logme@example\.in|a\.b\.c/);
+    } finally { spy.mockRestore(); }
+  });
+});

@@ -14,3 +14,7 @@ export const LOGIN_IP: RateLimit = { limit: 20, windowMs: 15 * 60_000 };
 export const LOGIN_EMAIL: RateLimit = { limit: 10, windowMs: 15 * 60_000 };
 /** Public endpoints guarded by a shared secret, keyed by IP. */
 export const PUBLIC_SECRET: RateLimit = { limit: 10, windowMs: 15 * 60_000 };
+/** Data gateway (/api/db): every page's reads and writes, so higher than the action endpoints. */
+export const DB_USER: RateLimit = { limit: 600, windowMs: 60_000 };
+/** Data gateway per IP; generous because a whole classroom can share one public IP. */
+export const DB_IP: RateLimit = { limit: 3000, windowMs: 60_000 };

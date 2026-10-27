@@ -54,6 +54,30 @@ and commit both repos. `npm run sync-shared -- --check` fails if the copies are 
 | `scripts/sync-shared.mjs` | Refreshes `src/shared` from the frontend repo |
 | `tests/` | Vitest suites |
 
+## Data gateway (`/api/db/...`)
+
+Every page's database and file-storage requests come through this backend: the frontend's Supabase
+client sends `/rest/v1/*` and `/storage/v1/object/*` calls to `/api/db/rest/v1/*` and
+`/api/db/storage/v1/object/*` (see the frontend's `src/lib/api/db-gateway.ts`). The gateway
+(`src/app/api/db/[...path]/route.ts`, rules in `src/lib/http/db-gateway.ts`):
+
+- requires a verified user token (the anon key alone is refused) and an allowed origin;
+- forwards the request **as that user** with the publishable key, so Row Level Security and Storage
+  policies still decide every read and write; the service-role key is never used here;
+- accepts only `public`-schema tables and RPCs, and storage object paths; the API root (schema
+  listing), other schemas, bucket admin and path tricks (`..`, encoded `/`) are refused;
+- rate limits per user (600/min) and per IP, caps bodies (2 MB data, 55 MB files), never caches;
+- writes one access-log line per request (method, table or bucket, status, ms, user id). Query
+  strings and file names are never logged.
+
+Sign-in session refresh and sign-out still go to Supabase Auth directly.
+
+## Access logs
+
+Every request writes one JSON line to stdout (visible in Railway's Deploy Logs), e.g.
+`{"type":"access","method":"POST","path":"/api/db/rest/v1/payments","status":201,"ms":83,"user":"<uuid>"}`.
+Filter by `"type":"access"`; warnings are 4xx, errors are 5xx.
+
 ## Security model
 
 - **Authentication:** every user endpoint requires `Authorization: Bearer <Supabase access token>`,

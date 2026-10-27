@@ -1,3 +1,4 @@
+import { logged } from "@backend/lib/http/endpoint";
 import { supabaseAdmin } from "@backend/lib/supabase/admin";
 import { cronAuthorized } from "@backend/server/delivery/cron-auth";
 import { runClassLifecycle } from "@backend/server/classes/class-lifecycle.server";
@@ -37,8 +38,9 @@ async function run(request: Request): Promise<Response> {
   } catch {
     return Response.json({ ...out, deliveries: { error: "Delivery run failed" } }, { status: 500, headers });
   }
+  console.log(JSON.stringify({ level: "info", type: "cron", ...out }));
   return Response.json(out, { headers });
 }
 
-export const GET = run;
-export const POST = run;
+export const GET = logged(run);
+export const POST = logged(run);
