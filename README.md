@@ -70,7 +70,11 @@ client sends `/rest/v1/*` and `/storage/v1/object/*` calls to `/api/db/rest/v1/*
 - writes one access-log line per request (method, table or bucket, status, ms, user id). Query
   strings and file names are never logged.
 
-Sign-in session refresh and sign-out still go to Supabase Auth directly.
+Sessions go through this backend too: `POST /api/auth/login` issues the session, `POST /api/auth/refresh`
+renews it (refused once an account is deactivated) and `POST /api/auth/logout` revokes it. Private files open
+through `GET /api/public/files?bucket=&path=&token=`, which streams the Storage-signed file (script-capable types
+are sandboxed and downloaded). The frontend has no Supabase URL or key; set `SUPABASE_URL` and
+`SUPABASE_PUBLISHABLE_KEY` here only.
 
 ## Access logs
 

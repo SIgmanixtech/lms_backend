@@ -18,3 +18,7 @@ export const PUBLIC_SECRET: RateLimit = { limit: 10, windowMs: 15 * 60_000 };
 export const DB_USER: RateLimit = { limit: 600, windowMs: 60_000 };
 /** Data gateway per IP; generous because a whole classroom can share one public IP. */
 export const DB_IP: RateLimit = { limit: 3000, windowMs: 60_000 };
+/** Session renewals per client IP (each signed-in tab renews about once an hour). */
+export const REFRESH_IP: RateLimit = { limit: 120, windowMs: 15 * 60_000 };
+/** Signed file downloads per client IP (images and documents on a page). */
+export const FILES_IP: RateLimit = { limit: 600, windowMs: 60_000 };

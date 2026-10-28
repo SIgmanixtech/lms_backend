@@ -9,6 +9,7 @@ import type { Profile } from "@/types/profile";
 export const API_ROUTES = {
   // Sign-in (public: no user token)
   login: "/api/auth/login",
+  refreshSession: "/api/auth/refresh",
   // Accounts (admin)
   createStudent: "/api/accounts/students/create",
   createTrainer: "/api/accounts/trainers/create",
@@ -18,6 +19,7 @@ export const API_ROUTES = {
   deleteAccount: "/api/accounts/delete",
   // Auth
   myAccess: "/api/auth/access",
+  signOut: "/api/auth/logout",
   changePassword: "/api/auth/change-password",
   accountStatus: "/api/auth/account-status",
   // Attendance
@@ -45,12 +47,18 @@ export const API_ROUTES = {
   deleteAssignment: "/api/assignments/delete",
   uploadAssignmentAttachment: "/api/assignments/attachment/upload",
   assignmentAttachmentUrl: "/api/assignments/attachment/url",
+  // Students: progress for a whole table page in one request
+  studentsProgress: "/api/students/progress",
+  // Dashboard (all tiles in one request)
+  dashboardSummary: "/api/dashboard/summary",
   // Notifications & delivery
   adminDailyWelcome: "/api/notifications/admin-welcome",
   deliveryConfig: "/api/notifications/delivery-config",
   runDelivery: "/api/notifications/run-delivery",
   // Integrations
   firebaseWebApiKey: "/api/firebase/web-api-key",
+  // Files: signed private-storage downloads, streamed through the backend (the signed token authorizes)
+  signedFile: "/api/public/files",
   // Public (no user token): bootstrap secret / cron secret
   bootstrapAdmin: "/api/public/bootstrap-admin",
   cronDeliverNotifications: "/api/public/cron/deliver-notifications",
@@ -67,10 +75,13 @@ export type DeleteOutcome = { outcome: "deleted" | "deactivated" };
 
 export interface AccessResult { state: AccessState; role: string | null }
 
-/** Supabase session issued at sign-in; the frontend hands it to the Supabase client, which refreshes it. */
+/** Session issued at sign-in. The frontend stores it and renews it only through /api/auth/refresh. */
 export interface LoginSession { access_token: string; refresh_token: string; expires_at: number | null; expires_in: number; token_type: string }
 /** Returned only for accounts that may continue (state "active" or "must_change_password"). */
 export interface LoginResult { session: LoginSession; user: { id: string; email: string | null }; profile: Profile; state: AccessState }
+
+/** Renewed session (POST /api/auth/refresh); refused for inactive or unprovisioned accounts. */
+export interface RefreshResult { session: LoginSession; user: { id: string; email: string | null } }
 
 export interface AttendanceReview { attendanceStatus: string; lastError: string | null; processedAt: string | null; unmatched: { email: string | null; minutes: number }[] }
 export interface RetryAttendanceResult { ok: true; message: string }
@@ -86,6 +97,12 @@ export type ZohoCheckResult =
 
 export type CurriculumDeleteOutcome = { outcome: "deleted" | "archived" };
 export type RemovalOutcome = { outcome: "deleted" | "archived" | "closed" };
+
+/** Overall progress (0..1, or null when there isn't enough data), in the same order as the request's items. */
+export interface StudentsProgressResult { progress: (number | null)[] }
+
+/** Dashboard tile values by metric key (see features/dashboard/dashboard-metrics.ts); fees in minor units. */
+export interface DashboardSummary { role: string; counts: Record<string, number>; outstandingFees: number | null }
 
 export interface DeliveryConfigResult { email: boolean; push: boolean; appUrl: boolean }
 export interface DispatchSummaryResult { claimed: number; sent: number; failed: number; skipped: number; retrying: number }

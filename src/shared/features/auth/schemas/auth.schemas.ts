@@ -17,6 +17,10 @@ export const loginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
+/** Session renewal request (refresh tokens are opaque strings issued at sign-in). */
+export const refreshSessionSchema = z.object({ refreshToken: z.string().min(1).max(4096) });
+export type RefreshSessionInput = z.infer<typeof refreshSessionSchema>;
+
 export const changePasswordSchema = z
   .object({ currentPassword: z.string().min(1).max(128), newPassword: passwordSchema })
   .refine((v) => v.currentPassword !== v.newPassword, {
