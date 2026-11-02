@@ -133,6 +133,8 @@ export const DATA_TABLES = [
   "batches", "certificates", "classes", "course_modules", "courses", "enrollments", "internships", "lesson_progress",
   "lesson_resources", "lessons", "payments", "profiles", "push_subscriptions", "recording_views", "recordings", "students",
   "submission_answers", "submission_files", "submissions", "system_settings", "trainer_assignments", "trainers",
+  // Module practice (see supabase/migrations/20261102100000_course_practice_and_curriculum.sql)
+  "practice_answer_keys", "practice_assignments", "practice_attempt_answers", "practice_attempts", "practice_questions",
 ] as const;
 export type DataTable = (typeof DATA_TABLES)[number];
 
@@ -153,9 +155,10 @@ export const ROLE_TABLES: Record<AppRole, Partial<Record<DataTable, readonly Dat
     attendance: ["GET", "POST", "PATCH"], submissions: ["GET", "PATCH"],
     course_modules: ["GET", "POST", "PATCH"], lessons: ["GET", "POST", "PATCH"], lesson_resources: ["GET", "POST", "PATCH"],
     recordings: ["GET", "POST"], push_subscriptions: WRITE,
+    practice_assignments: WRITE, practice_questions: WRITE, practice_answer_keys: WRITE,
   },
   student: {
-    ...allTables(READ, ["assessment_answer_keys", "assignment_answer_keys", "system_settings"]),
+    ...allTables(READ, ["assessment_answer_keys", "assignment_answer_keys", "system_settings", "practice_answer_keys", "practice_attempts", "practice_attempt_answers"]),
     profiles: ["GET", "PATCH"], students: ["GET", "PATCH"],
     submissions: ["GET", "POST", "PATCH"], submission_files: ["GET", "POST"], push_subscriptions: WRITE,
   },
@@ -169,6 +172,11 @@ export const ROLE_FUNCTIONS = {
   submit_assessment_attempt: { path: "assessments/attempts/submit", roles: STUDENT },
   grade_submission_answer: { path: "submissions/grade-answer", roles: TEACHING },
   grade_assessment_answer: { path: "assessments/grade-answer", roles: TEACHING },
+  submit_practice_attempt: { path: "practice/attempts/submit", roles: STUDENT },
+  my_practice_results: { path: "practice/my-results", roles: STUDENT },
+  my_practice_attempt: { path: "practice/my-attempts", roles: STUDENT },
+  grade_practice_answer: { path: "practice/grade-answer", roles: TEACHING },
+  declare_practice_result: { path: "practice/declare-result", roles: TEACHING },
 } as const satisfies Record<string, { path: string; roles: readonly AppRole[] }>;
 export type DataFunction = keyof typeof ROLE_FUNCTIONS;
 
