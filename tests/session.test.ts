@@ -21,8 +21,8 @@ vi.mock("@backend/lib/supabase/auth", () => ({
 process.env["SUPABASE_URL"] = "https://proj.supabase.co";
 process.env["SUPABASE_PUBLISHABLE_KEY"] = "server-publishable-key";
 
-const refresh = await import("@backend/app/api/auth/refresh/route");
-const logout = await import("@backend/app/api/auth/logout/route");
+const refresh = await import("@backend/app/api/v1/auth/refresh/route");
+const logout = await import("@backend/app/api/v1/auth/logout/route");
 const files = await import("@backend/app/api/public/files/route");
 const { resolveSignedFile } = await import("@backend/lib/http/db-gateway");
 
@@ -34,42 +34,42 @@ const session = { access_token: "new.access.token", refresh_token: "r2", expires
 
 beforeEach(() => { refreshSession.mockReset(); adminSignOut.mockClear(); profileRow = { role: "student", account_status: "active", must_change_password: false }; });
 
-describe("POST /api/auth/refresh", () => {
+describe("POST /api/v1/auth/refresh", () => {
   it("returns a renewed session for an active account", async () => {
     refreshSession.mockResolvedValue({ data: { session, user: { id: "u1", email: "a@b.in" } }, error: null });
-    const res = await post(refresh.POST, "/api/auth/refresh", { refreshToken: "r1" });
+    const res = await post(refresh.POST, "/api/v1/auth/refresh", { refreshToken: "r1" });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ session, user: { id: "u1", email: "a@b.in" } });
     expect(refreshSession).toHaveBeenCalledWith({ refresh_token: "r1" });
   });
   it("refuses an expired or revoked refresh token", async () => {
     refreshSession.mockResolvedValue({ data: { session: null, user: null }, error: { status: 400, code: "refresh_token_not_found" } });
-    const res = await post(refresh.POST, "/api/auth/refresh", { refreshToken: "old" });
+    const res = await post(refresh.POST, "/api/v1/auth/refresh", { refreshToken: "old" });
     expect(res.status).toBe(401);
     expect((await res.json()).error.code).toBe("AUTHENTICATION_ERROR");
   });
   it("refuses and revokes when the account was deactivated since sign-in", async () => {
     refreshSession.mockResolvedValue({ data: { session, user: { id: "u1", email: null } }, error: null });
     profileRow = { role: "student", account_status: "inactive", must_change_password: false };
-    const res = await post(refresh.POST, "/api/auth/refresh", { refreshToken: "r1" });
+    const res = await post(refresh.POST, "/api/v1/auth/refresh", { refreshToken: "r1" });
     expect(res.status).toBe(401);
     expect(adminSignOut).toHaveBeenCalledWith("new.access.token", "local");
   });
   it("validates the body", async () => {
-    const res = await post(refresh.POST, "/api/auth/refresh", { refreshToken: "" });
+    const res = await post(refresh.POST, "/api/v1/auth/refresh", { refreshToken: "" });
     expect(res.status).toBe(400);
     expect(refreshSession).not.toHaveBeenCalled();
   });
 });
 
-describe("POST /api/auth/logout", () => {
+describe("POST /api/v1/auth/logout", () => {
   it("revokes the caller's current session", async () => {
-    const res = await post(logout.POST, "/api/auth/logout", {}, { authorization: "Bearer user.jwt.token" });
+    const res = await post(logout.POST, "/api/v1/auth/logout", {}, { authorization: "Bearer user.jwt.token" });
     expect(res.status).toBe(200);
     expect(adminSignOut).toHaveBeenCalledWith("user.jwt.token", "local");
   });
   it("requires a signed-in caller", async () => {
-    const res = await post(logout.POST, "/api/auth/logout", {});
+    const res = await post(logout.POST, "/api/v1/auth/logout", {});
     expect(res.status).toBe(401);
     expect(adminSignOut).not.toHaveBeenCalled();
   });

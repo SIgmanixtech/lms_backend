@@ -208,6 +208,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "assessment_attempt_answers_graded_by_fkey"
+            columns: ["graded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "assessment_attempt_answers_attempt_id_fkey"
             columns: ["attempt_id"]
             isOneToOne: false
@@ -384,6 +391,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "assessments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assessments_course_id_fkey"
             columns: ["course_id"]
@@ -1930,6 +1944,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "submission_answers_graded_by_fkey"
+            columns: ["graded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "submission_answers_question_id_fkey"
             columns: ["question_id"]

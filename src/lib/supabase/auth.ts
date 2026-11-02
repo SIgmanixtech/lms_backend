@@ -2,6 +2,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { AppError } from "@/lib/errors";
 import { createSupabaseFetch, requireEnv } from "./fetch";
+import { roleAllowed, type Caller } from "@backend/lib/http/access";
+import type { AppRole } from "@/types/profile";
 
 export interface AuthContext {
   /** RLS-scoped client acting as the caller. */
@@ -25,4 +27,15 @@ export async function authenticate(request: Request): Promise<AuthContext> {
   const sub = data?.claims?.sub;
   if (error || typeof sub !== "string" || !sub) throw new AppError("AUTHENTICATION_ERROR");
   return { supabase, userId: sub, claims: data.claims as AuthContext["claims"] };
+}
+
+/**
+ * Role gate for `endpoint({ access: role })`: reads the caller's own profile as them (RLS allows a
+ * user to read their own row) and refuses unless the account is active and has exactly that role.
+ */
+export async function authorizeCaller(auth: AuthContext, role: AppRole): Promise<Caller> {
+  const { data, error } = await auth.supabase.from("profiles").select("role, account_status").eq("id", auth.userId).maybeSingle();
+  if (error) throw new AppError("DATABASE_ERROR", undefined, { cause: error });
+  if (!roleAllowed(role, data)) throw new AppError("AUTHORIZATION_ERROR");
+  return { role: data.role };
 }

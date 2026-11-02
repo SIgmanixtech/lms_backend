@@ -3,7 +3,7 @@ import { calculateProgress } from "./progress";
 
 /**
  * Progress for many students at once (e.g. a page of the Students table). The backend fetches each
- * source ONCE for all requested students (POST /api/students/progress) and this pure function does
+ * source ONCE for all requested students (POST /api/v1/<admin|tutor>/students/progress, or /api/v1/student/progress for a student's own) and this pure function does
  * the same math `loadStudentProgress` always did, per student. Shared with the backend via sync-shared.
  */
 export const PROGRESS_BATCH_MAX = 100;

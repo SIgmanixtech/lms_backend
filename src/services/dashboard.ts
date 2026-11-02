@@ -37,16 +37,21 @@ async function outstandingFees(db: Db): Promise<number> {
   return outstanding;
 }
 
+async function ownRole(auth: AuthContext): Promise<AppRole> {
+  const { data: profile, error } = await auth.supabase.from("profiles").select("role, account_status").eq("id", auth.userId).maybeSingle();
+  if (error) throw new AppError("DATABASE_ERROR", undefined, { cause: error });
+  if (!profile || profile.account_status !== "active") throw new AppError("AUTHORIZATION_ERROR");
+  return profile.role as AppRole;
+}
+
 /**
  * Every dashboard tile in one request. Runs as the caller (RLS), so each number covers only what
  * that user may see, exactly as the separate queries did; the role comes from their own profile.
  */
-export async function getDashboardSummary(auth: AuthContext): Promise<DashboardSummary> {
+export async function getDashboardSummary(auth: AuthContext, verifiedRole?: AppRole): Promise<DashboardSummary> {
   const db = auth.supabase as unknown as Db;
-  const { data: profile, error } = await auth.supabase.from("profiles").select("role, account_status").eq("id", auth.userId).maybeSingle();
-  if (error) throw new AppError("DATABASE_ERROR", undefined, { cause: error });
-  if (!profile || profile.account_status !== "active") throw new AppError("AUTHORIZATION_ERROR");
-  const role = profile.role as AppRole;
+  // The route's role gate has already read the caller's profile; reuse that instead of a second query.
+  const role = verifiedRole ?? (await ownRole(auth));
   const metrics = DASHBOARD_METRICS[role];
   if (!metrics) throw new AppError("AUTHORIZATION_ERROR");
 

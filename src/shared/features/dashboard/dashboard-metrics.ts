@@ -2,7 +2,7 @@ import type { AppRole } from "@/types/profile";
 
 /**
  * Dashboard tiles per role. Shared with the backend (`npm run sync-shared`), which counts them all
- * in one request (GET /api/dashboard/summary) as the caller, so Row Level Security scopes every number.
+ * in one request (GET /api/v1/<admin|tutor|student>/dashboard) as the caller, so Row Level Security scopes every number.
  * `fees` tiles show the outstanding fee total instead of a row count.
  */
 export type MetricFilterValue = string | null;

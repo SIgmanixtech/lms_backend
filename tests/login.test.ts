@@ -12,18 +12,18 @@ vi.mock("@backend/lib/supabase/admin", () => ({
 process.env["SUPABASE_URL"] = "https://example.supabase.co";
 process.env["SUPABASE_PUBLISHABLE_KEY"] = "pk";
 
-const { POST } = await import("@backend/app/api/auth/login/route");
+const { POST } = await import("@backend/app/api/v1/auth/login/route");
 
 let ipCounter = 0;
 const call = (body: unknown, ip = `10.0.0.${++ipCounter}`) =>
-  POST(new Request("http://localhost/api/auth/login", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ip, origin: "http://localhost:8080" }, body: JSON.stringify(body) }));
+  POST(new Request("http://localhost/api/v1/auth/login", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ip, origin: "http://localhost:8080" }, body: JSON.stringify(body) }));
 const session = { access_token: "a.b.c", refresh_token: "r", expires_at: 1, expires_in: 3600, token_type: "bearer" };
 const ok = (id = "u1") => signInWithPassword.mockResolvedValue({ data: { session, user: { id, email: "x@y.in" } }, error: null });
 const profile = (p: Record<string, unknown>) => { profileRow = { id: "u1", role: "student", account_status: "active", must_change_password: false, ...p }; };
 
 beforeEach(() => { signInWithPassword.mockReset(); signOut.mockClear(); profileRow = null; });
 
-describe("POST /api/auth/login", () => {
+describe("POST /api/v1/auth/login", () => {
   it("returns the session and profile for an active account", async () => {
     ok(); profile({});
     const res = await call({ email: " Student@Example.IN ", password: "secret" });
@@ -83,7 +83,7 @@ describe("POST /api/auth/login", () => {
   });
 
   it("refuses requests from other websites", async () => {
-    const res = await POST(new Request("http://localhost/api/auth/login", { method: "POST", headers: { "content-type": "application/json", origin: "https://evil.example" }, body: JSON.stringify({ email: "a@b.in", password: "x" }) }));
+    const res = await POST(new Request("http://localhost/api/v1/auth/login", { method: "POST", headers: { "content-type": "application/json", origin: "https://evil.example" }, body: JSON.stringify({ email: "a@b.in", password: "x" }) }));
     expect(res.status).toBe(403);
     expect(signInWithPassword).not.toHaveBeenCalled();
   });
@@ -100,7 +100,7 @@ describe("access log", () => {
       const lines = spy.mock.calls.map((c) => String(c[0])).filter((l) => l.includes('"type":"access"'));
       expect(lines).toHaveLength(2);
       const [okLine, failLine] = lines.map((l) => JSON.parse(l));
-      expect(okLine).toMatchObject({ method: "POST", path: "/api/auth/login", status: 200, user: "user-123", level: "info" });
+      expect(okLine).toMatchObject({ method: "POST", path: "/api/v1/auth/login", status: 200, user: "user-123", level: "info" });
       expect(failLine).toMatchObject({ status: 401, code: "AUTHENTICATION_ERROR", user: null, level: "warn" });
       expect(lines.join("\n")).not.toMatch(/Sup3r-Secret|logme@example\.in|a\.b\.c/);
     } finally { spy.mockRestore(); }

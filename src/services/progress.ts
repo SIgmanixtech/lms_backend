@@ -55,3 +55,15 @@ export async function getStudentsProgress(auth: AuthContext, data: ProgressBatch
     }),
   };
 }
+
+/**
+ * Student-only variant (POST /api/v1/student/progress): the same calculation, but every item must be the
+ * caller's own student record, so a student can't ask for anyone else's progress.
+ */
+export async function getMyProgress(auth: AuthContext, data: ProgressBatchInput): Promise<StudentsProgressResult> {
+  if (!data.items.length) return { progress: [] };
+  const { data: me, error } = await auth.supabase.from("students").select("id").eq("profile_id", auth.userId).maybeSingle();
+  if (error) throw new AppError("DATABASE_ERROR", undefined, { cause: error });
+  if (!me || data.items.some((i) => i.studentId !== me.id)) throw new AppError("AUTHORIZATION_ERROR");
+  return getStudentsProgress(auth, data);
+}

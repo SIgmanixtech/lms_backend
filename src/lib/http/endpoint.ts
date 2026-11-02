@@ -1,5 +1,6 @@
 import { AppError, toAppError } from "@/lib/errors";
-import { authenticate, type AuthContext } from "@backend/lib/supabase/auth";
+import { authenticate, authorizeCaller, type AuthContext } from "@backend/lib/supabase/auth";
+import type { Access, Caller } from "./access";
 import { readJson, DEFAULT_MAX_BODY_BYTES } from "./body";
 import { corsHeaders, isAllowedOrigin, preflight } from "./cors";
 import { clientIp, enforce, RateLimitedError, type RateLimit } from "./rate-limit";
@@ -7,12 +8,21 @@ import { clientIp, enforce, RateLimitedError, type RateLimit } from "./rate-limi
 export interface EndpointContext<I> {
   data: I;
   auth: AuthContext;
+  /** The caller's verified role; null only for `access: "signed-in"` endpoints. */
+  caller: Caller | null;
   request: Request;
   correlationId: string;
 }
 
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+const HAS_BODY = new Set<HttpMethod>(["POST", "PUT", "PATCH"]);
+
 export interface EndpointOptions<I> {
-  method: "GET" | "POST";
+  method: HttpMethod;
+  /** Values taken from the URL path (e.g. `:id`), merged over the body or query before validation. */
+  pathParams?: (pathname: string) => Record<string, string>;
+  /** Who may call it (see ./access.ts). Required, so no route can skip the server-side role check. */
+  access: Access;
   /** Validates the untrusted body; must throw AppError on bad input. Omitted = no input accepted. */
   input?: (raw: unknown) => I;
   maxBodyBytes?: number;
@@ -43,8 +53,9 @@ export function errorResponse(request: Request, methods: string, error: unknown,
 
 /**
  * Wraps an authenticated JSON endpoint. Every request: origin allowlist, IP + user rate limits,
- * Supabase token verification, bounded JSON body, schema validation, and errors returned only
- * as safe AppError payloads (raw database/provider messages never leave the server).
+ * Supabase token verification, role check for the declared `access`, bounded JSON body, schema
+ * validation, and errors returned only as safe AppError payloads (raw database/provider messages
+ * never leave the server).
  */
 /**
  * One access-log line per API request (stdout, so it shows in Railway's deploy logs).
@@ -75,6 +86,18 @@ export function logged<A extends unknown[]>(fn: (request: Request, ...rest: A) =
   return (request: Request, ...rest: A): Promise<Response> => withAccessLog(request, crypto.randomUUID(), () => fn(request, ...rest));
 }
 
+/**
+ * The untrusted input of a request: the JSON body (POST/PUT/PATCH) or the query string (GET/DELETE),
+ * with any path parameters merged over it. Validation happens next, in the endpoint's `input`.
+ */
+async function readInput<I>(request: Request, opts: EndpointOptions<I>): Promise<unknown> {
+  const url = new URL(request.url);
+  const raw = HAS_BODY.has(opts.method) ? await readJson(request, opts.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES) : Object.fromEntries(url.searchParams);
+  const params = opts.pathParams?.(url.pathname) ?? {};
+  if (!Object.keys(params).length) return raw;
+  return raw && typeof raw === "object" && !Array.isArray(raw) ? { ...(raw as Record<string, unknown>), ...params } : params;
+}
+
 export function endpoint<I = undefined, O = unknown>(opts: EndpointOptions<I>, handler: (ctx: EndpointContext<I>) => Promise<O>) {
   const methods = `${opts.method}, OPTIONS`;
   async function handle(request: Request): Promise<Response> {
@@ -92,9 +115,10 @@ export function endpoint<I = undefined, O = unknown>(opts: EndpointOptions<I>, h
       setUser(auth.userId);
       enforce(`user:${auth.userId}`, PER_USER);
       if (opts.rateLimit) enforce(`user:${auth.userId}:${new URL(request.url).pathname}`, opts.rateLimit);
-      const raw = opts.method === "POST" ? await readJson(request, opts.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES) : {};
-      const data = (opts.input ? opts.input(raw) : undefined) as I;
-      const result = await handler({ data, auth, request, correlationId });
+      // Role check before the body is read or anything else runs.
+      const caller = opts.access === "signed-in" ? null : await authorizeCaller(auth, opts.access);
+      const data = (opts.input ? opts.input(await readInput(request, opts)) : undefined) as I;
+      const result = await handler({ data, auth, caller, request, correlationId });
       return new Response(JSON.stringify(result ?? null), { status: 200, headers: { ...JSON_HEADERS, ...corsHeaders(request, methods) } });
     } catch (error) {
       return errorResponse(request, methods, error, correlationId);
@@ -115,7 +139,7 @@ export interface PublicEndpointContext<I> {
  * IP rate limit, bounded body, validation and safe errors as `endpoint()`, minus token checks;
  * the handler must apply its own stricter limits.
  */
-export function publicEndpoint<I, O>(opts: Omit<EndpointOptions<I>, "rateLimit"> & { input: (raw: unknown) => I }, handler: (ctx: PublicEndpointContext<I>) => Promise<O>) {
+export function publicEndpoint<I, O>(opts: Omit<EndpointOptions<I>, "rateLimit" | "access"> & { input: (raw: unknown) => I }, handler: (ctx: PublicEndpointContext<I>) => Promise<O>) {
   const methods = `${opts.method}, OPTIONS`;
   async function handle(request: Request): Promise<Response> {
     const correlationId = crypto.randomUUID();
