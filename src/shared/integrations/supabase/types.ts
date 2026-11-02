@@ -1051,6 +1051,7 @@ export type Database = {
       }
       courses: {
         Row: {
+          category: string | null
           code: string
           created_at: string
           currency: string
@@ -1067,6 +1068,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string | null
           code: string
           created_at?: string
           currency?: string
@@ -1083,6 +1085,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string | null
           code?: string
           created_at?: string
           currency?: string
@@ -1400,6 +1403,7 @@ export type Database = {
       }
       lessons: {
         Row: {
+          lesson_type: string
           content: string | null
           created_at: string
           description: string | null
@@ -1411,6 +1415,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          lesson_type?: string
           content?: string | null
           created_at?: string
           description?: string | null
@@ -1422,6 +1427,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          lesson_type?: string
           content?: string | null
           created_at?: string
           description?: string | null
@@ -1640,6 +1646,265 @@ export type Database = {
             columns: ["recorded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_assignments: {
+        Row: {
+          course_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          instructions: string | null
+          max_attempts: number | null
+          module_id: string
+          pass_percent: number | null
+          published_at: string | null
+          sort_order: number
+          status: string
+          title: string
+          total_marks: number
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instructions?: string | null
+          max_attempts?: number | null
+          module_id: string
+          pass_percent?: number | null
+          published_at?: string | null
+          sort_order?: number
+          status?: string
+          title: string
+          total_marks?: number
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instructions?: string | null
+          max_attempts?: number | null
+          module_id?: string
+          pass_percent?: number | null
+          published_at?: string | null
+          sort_order?: number
+          status?: string
+          title?: string
+          total_marks?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_assignments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_assignments_module_id_course_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "course_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_questions: {
+        Row: {
+          created_at: string
+          id: string
+          marks: number
+          options: Json
+          practice_id: string
+          prompt: string
+          question_type: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          marks?: number
+          options?: Json
+          practice_id: string
+          prompt: string
+          question_type: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          marks?: number
+          options?: Json
+          practice_id?: string
+          prompt?: string
+          question_type?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_questions_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "practice_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_answer_keys: {
+        Row: {
+          correct: Json
+          created_at: string
+          question_id: string
+        }
+        Insert: {
+          correct: Json
+          created_at?: string
+          question_id: string
+        }
+        Update: {
+          correct?: Json
+          created_at?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_answer_keys_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "practice_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_attempts: {
+        Row: {
+          attempt_no: number
+          created_at: string
+          declared_at: string | null
+          declared_by: string | null
+          id: string
+          max_score: number
+          passed: boolean | null
+          practice_id: string
+          results_declared: boolean
+          score: number | null
+          status: string
+          student_id: string
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_no: number
+          created_at?: string
+          declared_at?: string | null
+          declared_by?: string | null
+          id?: string
+          max_score: number
+          passed?: boolean | null
+          practice_id: string
+          results_declared?: boolean
+          score?: number | null
+          status: string
+          student_id: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_no?: number
+          created_at?: string
+          declared_at?: string | null
+          declared_by?: string | null
+          id?: string
+          max_score?: number
+          passed?: boolean | null
+          practice_id?: string
+          results_declared?: boolean
+          score?: number | null
+          status?: string
+          student_id?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_attempts_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "practice_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_attempt_answers: {
+        Row: {
+          answer: Json | null
+          attempt_id: string
+          auto_graded: boolean
+          created_at: string
+          feedback: string | null
+          graded_at: string | null
+          graded_by: string | null
+          id: string
+          marks_awarded: number | null
+          question_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer?: Json | null
+          attempt_id: string
+          auto_graded?: boolean
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          marks_awarded?: number | null
+          question_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: Json | null
+          attempt_id?: string
+          auto_graded?: boolean
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          marks_awarded?: number | null
+          question_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_attempt_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "practice_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_attempt_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "practice_questions"
             referencedColumns: ["id"]
           },
         ]
@@ -2417,6 +2682,48 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      declare_practice_result: {
+        Args: { _attempt_id: string }
+        Returns: undefined
+      }
+      grade_practice_answer: {
+        Args: { _answer_id: string; _feedback: string; _marks: number }
+        Returns: undefined
+      }
+      my_practice_attempt: {
+        Args: { _practice_id: string }
+        Returns: {
+          answer: Json
+          attempt_id: string
+          attempt_no: number
+          correct: Json
+          feedback: string
+          marks_awarded: number
+          max_score: number
+          passed: boolean
+          question_id: string
+          results_declared: boolean
+          score: number
+          submitted_at: string
+        }[]
+      }
+      my_practice_results: {
+        Args: { _course_id: string }
+        Returns: {
+          attempts_used: number
+          best_score: number
+          last_submitted_at: string
+          max_attempts: number
+          max_score: number
+          passed: boolean
+          pending_review: number
+          practice_id: string
+        }[]
+      }
+      submit_practice_attempt: {
+        Args: { _answers: Json; _practice_id: string }
+        Returns: Json
       }
       submit_assignment_answers: {
         Args: { _answers: Json; _assignment_id: string }
